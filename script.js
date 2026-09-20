@@ -49,6 +49,54 @@ function getLegalMoves(board, row, col) {
   return moves;
 }
 
+// Legal forward jumps for the piece at (row, col): an adjacent enemy piece
+// with an empty landing square right behind it.
+function getJumpMoves(board, row, col) {
+  const piece = board[row][col];
+  if (!piece) return [];
+
+  const dir = forwardDirection(piece.player);
+  const moves = [];
+  for (const dc of [-1, 1]) {
+    const midRow = row + dir;
+    const midCol = col + dc;
+    const landRow = row + 2 * dir;
+    const landCol = col + 2 * dc;
+    if (!inBounds(landRow, landCol)) continue;
+
+    const midPiece = board[midRow][midCol];
+    if (midPiece && midPiece.player !== piece.player && board[landRow][landCol] === null) {
+      moves.push({ row: landRow, col: landCol, capturedRow: midRow, capturedCol: midCol });
+    }
+  }
+  return moves;
+}
+
+function anyJumpsAvailable(board, player) {
+  for (let row = 0; row < BOARD_SIZE; row++) {
+    for (let col = 0; col < BOARD_SIZE; col++) {
+      const piece = board[row][col];
+      if (piece && piece.player === player && getJumpMoves(board, row, col).length > 0) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+// Moves selectable for the piece at (row, col) this turn: if any of the
+// player's pieces can jump, jumping is mandatory, so only jumps qualify.
+function getSelectableMoves(board, row, col) {
+  const piece = board[row][col];
+  if (!piece) return [];
+
+  const jumps = getJumpMoves(board, row, col);
+  if (anyJumpsAvailable(board, piece.player)) {
+    return jumps;
+  }
+  return getLegalMoves(board, row, col);
+}
+
 const state = {
   board: createInitialBoard(),
   currentPlayer: 'black',
@@ -76,18 +124,24 @@ function handleSquareClick(row, col) {
   const { board, selected } = state;
   const piece = board[row][col];
 
-  if (selected && isHighlighted(row, col)) {
-    board[row][col] = board[selected.row][selected.col];
-    board[selected.row][selected.col] = null;
-    state.selected = null;
-    state.legalMoves = [];
-    state.currentPlayer = state.currentPlayer === 'black' ? 'white' : 'black';
-    render();
-    return;
+  if (selected) {
+    const move = state.legalMoves.find((m) => m.row === row && m.col === col);
+    if (move) {
+      board[row][col] = board[selected.row][selected.col];
+      board[selected.row][selected.col] = null;
+      if (move.capturedRow !== undefined) {
+        board[move.capturedRow][move.capturedCol] = null;
+      }
+      state.selected = null;
+      state.legalMoves = [];
+      state.currentPlayer = state.currentPlayer === 'black' ? 'white' : 'black';
+      render();
+      return;
+    }
   }
 
   if (piece && piece.player === state.currentPlayer) {
-    const moves = getLegalMoves(board, row, col);
+    const moves = getSelectableMoves(board, row, col);
     if (moves.length > 0) {
       state.selected = { row, col };
       state.legalMoves = moves;
@@ -102,6 +156,8 @@ function handleSquareClick(row, col) {
 
 function renderBoard() {
   const boardEl = document.getElementById('board');
+  const jumpsRequired = anyJumpsAvailable(state.board, state.currentPlayer);
+
   boardEl.innerHTML = '';
   for (let row = 0; row < BOARD_SIZE; row++) {
     for (let col = 0; col < BOARD_SIZE; col++) {
@@ -112,6 +168,12 @@ function renderBoard() {
       }
       if (isHighlighted(row, col)) {
         classes.push('highlight');
+      }
+      if (!state.selected && jumpsRequired) {
+        const piece = state.board[row][col];
+        if (piece && piece.player === state.currentPlayer && getJumpMoves(state.board, row, col).length > 0) {
+          classes.push('jumpable');
+        }
       }
       square.className = classes.join(' ');
       square.addEventListener('click', () => handleSquareClick(row, col));
