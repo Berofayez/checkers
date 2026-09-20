@@ -136,6 +136,8 @@ function checkForWinner() {
   }
 }
 
+const DRAW_LIMIT = 40;
+
 const state = {
   board: createInitialBoard(),
   currentPlayer: 'black',
@@ -143,7 +145,25 @@ const state = {
   legalMoves: [],
   mustContinue: false,
   winner: null,
+  draw: false,
+  noProgressCount: 0,
+  turnHadProgress: false,
 };
+
+// Draws are counted in whole turns with no capture and no new king, even
+// across a multi-jump chain, so progress is accumulated until the turn ends.
+function checkForDraw() {
+  if (state.turnHadProgress) {
+    state.noProgressCount = 0;
+  } else {
+    state.noProgressCount += 1;
+  }
+  state.turnHadProgress = false;
+
+  if (state.noProgressCount >= DRAW_LIMIT) {
+    state.draw = true;
+  }
+}
 
 function countPieces(board, player) {
   let count = 0;
@@ -162,7 +182,7 @@ function isHighlighted(row, col) {
 }
 
 function handleSquareClick(row, col) {
-  if (state.winner) return;
+  if (state.winner || state.draw) return;
 
   const { board, selected } = state;
   const piece = board[row][col];
@@ -185,6 +205,10 @@ function handleSquareClick(row, col) {
         justPromoted = true;
       }
 
+      if (wasJump || justPromoted) {
+        state.turnHadProgress = true;
+      }
+
       // A king crowned mid-chain stops immediately, even if it could jump again.
       const furtherJumps = wasJump && !justPromoted ? getJumpMoves(board, row, col) : [];
       if (furtherJumps.length > 0) {
@@ -197,6 +221,9 @@ function handleSquareClick(row, col) {
         state.mustContinue = false;
         state.currentPlayer = otherPlayer(state.currentPlayer);
         checkForWinner();
+        if (!state.winner) {
+          checkForDraw();
+        }
       }
       render();
       return;
@@ -263,6 +290,10 @@ function renderStatus() {
   if (state.winner) {
     const label = state.winner === 'black' ? 'Black' : 'White';
     statusEl.textContent = `${label} wins`;
+    return;
+  }
+  if (state.draw) {
+    statusEl.textContent = 'Draw';
     return;
   }
   const label = state.currentPlayer === 'black' ? 'Black' : 'White';
