@@ -72,6 +72,14 @@
     <li>A normal piece moves one square diagonally <strong>forward only</strong> &mdash;
       never backward or sideways.</li>
   </ul>
+  <figure>
+    <svg id="diagram-move-demo" width="180" height="180"></svg>
+    <figcaption>
+      A move in motion: the piece slides onto the highlighted square. This
+      loops for illustration &mdash; it's not a video, just an in-page
+      animation.
+    </figcaption>
+  </figure>
 
   <h2>Jumping (capturing)</h2>
   <p>
@@ -266,9 +274,71 @@
       svg.appendChild(crown);
     }
 
+    // A 2x2 close-up: a piece slides diagonally onto a highlighted square,
+    // then back, looping forever. A plain requestAnimationFrame loop is
+    // used instead of an SVG/CSS animation so it behaves the same in every
+    // browser without relying on SMIL.
+    function drawMoveDemo() {
+      const svg = document.getElementById('diagram-move-demo');
+      const cell = 90;
+
+      for (let row = 0; row < 2; row++) {
+        for (let col = 0; col < 2; col++) {
+          const dark = (row + col) % 2 === 1;
+          svg.appendChild(el('rect', {
+            x: col * cell, y: row * cell, width: cell, height: cell,
+            fill: dark ? '#8b5a3c' : '#f0d9b5',
+          }));
+        }
+      }
+
+      // Destination square (top-right), highlighted the whole time, just
+      // like a real legal move would be.
+      svg.appendChild(el('rect', {
+        x: 1 * cell, y: 0, width: cell, height: cell,
+        fill: 'none', stroke: '#4caf50', 'stroke-width': 4,
+      }));
+
+      const piece = el('circle', {
+        r: cell * 0.32, fill: '#222', stroke: '#000', 'stroke-width': 1.5,
+      });
+      svg.appendChild(piece);
+
+      const start = { x: 0 * cell + cell / 2, y: 1 * cell + cell / 2 };
+      const end = { x: 1 * cell + cell / 2, y: 0 * cell + cell / 2 };
+      const slide = 900;
+      const pause = 700;
+      const cycle = slide * 2 + pause * 2;
+      let startTime = null;
+
+      function frame(now) {
+        if (startTime === null) startTime = now;
+        const elapsed = (now - startTime) % cycle;
+
+        let t;
+        if (elapsed < slide) {
+          t = elapsed / slide;
+        } else if (elapsed < slide + pause) {
+          t = 1;
+        } else if (elapsed < slide * 2 + pause) {
+          t = 1 - (elapsed - slide - pause) / slide;
+        } else {
+          t = 0;
+        }
+        // Ease in/out instead of a linear slide.
+        const eased = t * t * (3 - 2 * t);
+
+        piece.setAttribute('cx', start.x + (end.x - start.x) * eased);
+        piece.setAttribute('cy', start.y + (end.y - start.y) * eased);
+        requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+    }
+
     drawSetupDiagram();
     drawCaptureDiagram();
     drawKingDiagram();
+    drawMoveDemo();
   </script>
 </body>
 </html>
