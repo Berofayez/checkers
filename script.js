@@ -311,4 +311,19 @@ function render() {
   renderCounts();
 }
 
+function resetGame() {
+  state.board = createInitialBoard();
+  state.currentPlayer = 'black';
+  state.selected = null;
+  state.legalMoves = [];
+  state.mustContinue = false;
+  state.winner = null;
+  state.draw = false;
+  state.noProgressCount = 0;
+  state.turnHadProgress = false;
+  render();
+}
+
+document.getElementById('new-game').addEventListener('click', resetGame);
+
 render();

@@ -88,3 +88,9 @@ body {
   margin: 12px 0;
   font-size: 1rem;
 }
+
+#new-game {
+  padding: 8px 16px;
+  font-size: 1rem;
+  cursor: pointer;
+}
