@@ -89,8 +89,31 @@ body {
   font-size: 1rem;
 }
 
-#new-game {
+#controls {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+#new-game,
+#help-link {
   padding: 8px 16px;
   font-size: 1rem;
   cursor: pointer;
+  font-family: inherit;
+  border-radius: 4px;
+}
+
+#new-game {
+  border: 1px solid #999;
+  background: #fff;
+}
+
+#help-link {
+  border: 1px solid #5a3e2b;
+  background: #f0d9b5;
+  color: #222;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
 }

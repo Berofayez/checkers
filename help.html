@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>How to play Checkers</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f4f1ea;
+      color: #222;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 24px 20px 60px;
+      line-height: 1.5;
+    }
+    h1 {
+      margin-top: 0;
+    }
+    h2 {
+      border-bottom: 2px solid #8b5a3c;
+      padding-bottom: 4px;
+      margin-top: 40px;
+    }
+    figure {
+      margin: 16px 0;
+      text-align: center;
+    }
+    figcaption {
+      font-size: 0.9rem;
+      color: #555;
+      margin-top: 6px;
+    }
+    svg {
+      background: #fff;
+      border: 1px solid #ccc;
+    }
+    .back-link {
+      display: inline-block;
+      margin-top: 32px;
+    }
+    ul {
+      padding-left: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>How to play Checkers</h1>
+  <p>
+    This is a two-player checkers game played by taking turns on the same
+    screen. It uses American checkers rules, except each player starts with
+    <strong>8 pieces</strong> instead of 12.
+  </p>
+
+  <h2>The board and starting position</h2>
+  <p>
+    The board is 8&times;8 squares. Pieces only ever sit on the dark
+    squares. <strong>White</strong> starts on the two rows nearest the top,
+    and <strong>Black</strong> starts on the two rows nearest the bottom.
+    The middle four rows start empty. <strong>Black always moves first.</strong>
+  </p>
+  <figure>
+    <svg id="diagram-setup" width="208" height="208"></svg>
+    <figcaption>Starting position: White on top, Black on bottom.</figcaption>
+  </figure>
+
+  <h2>Moving a piece</h2>
+  <ul>
+    <li>Click one of your pieces to select it. Its legal squares light up green.</li>
+    <li>Click a lit-up square to move there.</li>
+    <li>Clicking anywhere else does nothing.</li>
+    <li>Clicking a different piece of yours switches your selection.</li>
+    <li>A normal piece moves one square diagonally <strong>forward only</strong> &mdash;
+      never backward or sideways.</li>
+  </ul>
+
+  <h2>Jumping (capturing)</h2>
+  <p>
+    If an enemy piece sits diagonally next to yours, and the square right
+    behind it is empty, you can jump over it to capture it.
+  </p>
+  <figure>
+    <svg id="diagram-capture" width="210" height="210"></svg>
+    <figcaption>
+      The black piece jumps diagonally over the white piece, landing on the
+      empty square beyond it. The white piece is removed.
+    </figcaption>
+  </figure>
+  <ul>
+    <li><strong>Jumping is mandatory.</strong> If any of your pieces can jump,
+      you must jump &mdash; a quiet move isn't allowed. Pieces that can jump
+      are outlined in red.</li>
+    <li>If more than one jump is available, you choose which one to take.</li>
+    <li><strong>Multi-jump:</strong> if the piece you just jumped with can
+      jump again immediately, it must keep jumping in the same turn. No other
+      piece may move until the chain ends.</li>
+  </ul>
+
+  <h2>Kings</h2>
+  <p>
+    A piece that reaches the far row becomes a <strong>king</strong>, shown
+    with a crown. A king can move and jump one square diagonally in
+    <strong>any</strong> of the four directions, not just forward.
+  </p>
+  <figure>
+    <svg id="diagram-king" width="210" height="210"></svg>
+    <figcaption>A king can move or jump in any of the four diagonal directions.</figcaption>
+  </figure>
+  <p>
+    If a piece is crowned in the middle of a multi-jump, its turn ends right
+    away, even if the new king could technically keep jumping.
+  </p>
+
+  <h2>How the game ends</h2>
+  <ul>
+    <li><strong>Win:</strong> if the player to move has no pieces left, or
+      has pieces but no legal move (including no legal jump), the other
+      player wins.</li>
+    <li><strong>Draw:</strong> if 40 turns in a row pass with no capture and
+      no piece is newly crowned, the game is a draw.</li>
+  </ul>
+  <p>
+    Use the <strong>New game</strong> button at any time to reset the board
+    and start over.
+  </p>
+
+  <a class="back-link" href="index.html">&larr; Back to the game</a>
+
+  <script>
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+
+    function el(name, attrs) {
+      const node = document.createElementNS(SVG_NS, name);
+      for (const key in attrs) {
+        node.setAttribute(key, attrs[key]);
+      }
+      return node;
+    }
+
+    function drawSetupDiagram() {
+      const svg = document.getElementById('diagram-setup');
+      const cell = 26;
+      for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+          const dark = (row + col) % 2 === 1;
+          svg.appendChild(el('rect', {
+            x: col * cell, y: row * cell, width: cell, height: cell,
+            fill: dark ? '#8b5a3c' : '#f0d9b5',
+          }));
+
+          let player = null;
+          if (dark) {
+            if (row <= 1) player = 'white';
+            else if (row >= 6) player = 'black';
+          }
+          if (player) {
+            svg.appendChild(el('circle', {
+              cx: col * cell + cell / 2, cy: row * cell + cell / 2, r: cell * 0.38,
+              fill: player === 'black' ? '#222' : '#f5f5f5',
+              stroke: player === 'black' ? '#000' : '#999', 'stroke-width': 1.5,
+            }));
+          }
+        }
+      }
+    }
+
+    function drawArrowMarker(svg) {
+      const defs = el('defs', {});
+      const marker = el('marker', {
+        id: 'arrowhead', markerWidth: 8, markerHeight: 8,
+        refX: 5, refY: 4, orient: 'auto',
+      });
+      marker.appendChild(el('path', { d: 'M0,0 L8,4 L0,8 Z', fill: '#c0392b' }));
+      defs.appendChild(marker);
+      svg.appendChild(defs);
+    }
+
+    // A 3x3 close-up: attacker at bottom-left, enemy in the middle,
+    // highlighted empty landing square at top-right.
+    function drawCaptureDiagram() {
+      const svg = document.getElementById('diagram-capture');
+      const cell = 70;
+      drawArrowMarker(svg);
+
+      for (let row = 0; row < 3; row++) {
+        for (let col = 0; col < 3; col++) {
+          const dark = (row + col) % 2 === 1;
+          svg.appendChild(el('rect', {
+            x: col * cell, y: row * cell, width: cell, height: cell,
+            fill: dark ? '#8b5a3c' : '#f0d9b5',
+          }));
+        }
+      }
+
+      // Landing square highlight (top-right).
+      svg.appendChild(el('rect', {
+        x: 2 * cell, y: 0, width: cell, height: cell,
+        fill: 'none', stroke: '#4caf50', 'stroke-width': 4,
+      }));
+
+      // Enemy piece (middle).
+      svg.appendChild(el('circle', {
+        cx: 1 * cell + cell / 2, cy: 1 * cell + cell / 2, r: cell * 0.32,
+        fill: '#f5f5f5', stroke: '#999', 'stroke-width': 1.5,
+      }));
+
+      // Attacking piece (bottom-left).
+      svg.appendChild(el('circle', {
+        cx: 0 * cell + cell / 2, cy: 2 * cell + cell / 2, r: cell * 0.32,
+        fill: '#222', stroke: '#000', 'stroke-width': 1.5,
+      }));
+
+      // Arrow from attacker to landing square.
+      svg.appendChild(el('line', {
+        x1: 0 * cell + cell / 2, y1: 2 * cell + cell / 2 - 10,
+        x2: 2 * cell + cell / 2 - 12, y2: 0 * cell + cell / 2 + 12,
+        stroke: '#c0392b', 'stroke-width': 3, 'marker-end': 'url(#arrowhead)',
+      }));
+    }
+
+    // A 3x3 close-up: a king in the center with arrows to all four
+    // diagonal neighbors.
+    function drawKingDiagram() {
+      const svg = document.getElementById('diagram-king');
+      const cell = 70;
+      drawArrowMarker(svg);
+
+      for (let row = 0; row < 3; row++) {
+        for (let col = 0; col < 3; col++) {
+          const dark = (row + col) % 2 === 1;
+          svg.appendChild(el('rect', {
+            x: col * cell, y: row * cell, width: cell, height: cell,
+            fill: dark ? '#8b5a3c' : '#f0d9b5',
+          }));
+        }
+      }
+
+      const center = { x: 1 * cell + cell / 2, y: 1 * cell + cell / 2 };
+      const corners = [
+        { x: 0 * cell + cell / 2, y: 0 * cell + cell / 2 },
+        { x: 2 * cell + cell / 2, y: 0 * cell + cell / 2 },
+        { x: 0 * cell + cell / 2, y: 2 * cell + cell / 2 },
+        { x: 2 * cell + cell / 2, y: 2 * cell + cell / 2 },
+      ];
+
+      for (const corner of corners) {
+        const dx = corner.x - center.x;
+        const dy = corner.y - center.y;
+        const len = Math.hypot(dx, dy);
+        const pad = 22;
+        svg.appendChild(el('line', {
+          x1: center.x + (dx / len) * pad, y1: center.y + (dy / len) * pad,
+          x2: corner.x - (dx / len) * pad, y2: corner.y - (dy / len) * pad,
+          stroke: '#c0392b', 'stroke-width': 3, 'marker-end': 'url(#arrowhead)',
+        }));
+      }
+
+      svg.appendChild(el('circle', {
+        cx: center.x, cy: center.y, r: cell * 0.32,
+        fill: '#222', stroke: '#000', 'stroke-width': 1.5,
+      }));
+      const crown = el('text', {
+        x: center.x, y: center.y + 7, 'text-anchor': 'middle',
+        'font-size': 20, fill: '#f4c542',
+      });
+      crown.textContent = '♛';
+      svg.appendChild(crown);
+    }
+
+    drawSetupDiagram();
+    drawCaptureDiagram();
+    drawKingDiagram();
+  </script>
+</body>
+</html>
