@@ -102,6 +102,7 @@ const state = {
   currentPlayer: 'black',
   selected: null,
   legalMoves: [],
+  mustContinue: false,
 };
 
 function countPieces(board, player) {
@@ -129,13 +130,29 @@ function handleSquareClick(row, col) {
     if (move) {
       board[row][col] = board[selected.row][selected.col];
       board[selected.row][selected.col] = null;
-      if (move.capturedRow !== undefined) {
+
+      const wasJump = move.capturedRow !== undefined;
+      if (wasJump) {
         board[move.capturedRow][move.capturedCol] = null;
       }
-      state.selected = null;
-      state.legalMoves = [];
-      state.currentPlayer = state.currentPlayer === 'black' ? 'white' : 'black';
+
+      const furtherJumps = wasJump ? getJumpMoves(board, row, col) : [];
+      if (furtherJumps.length > 0) {
+        state.selected = { row, col };
+        state.legalMoves = furtherJumps;
+        state.mustContinue = true;
+      } else {
+        state.selected = null;
+        state.legalMoves = [];
+        state.mustContinue = false;
+        state.currentPlayer = state.currentPlayer === 'black' ? 'white' : 'black';
+      }
       render();
+      return;
+    }
+
+    if (state.mustContinue) {
+      // Mid multi-jump: no other piece can move until the chain ends.
       return;
     }
   }
