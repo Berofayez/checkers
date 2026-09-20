@@ -32,44 +32,56 @@ function forwardDirection(player) {
   return player === 'black' ? -1 : 1;
 }
 
-// Legal non-capturing forward moves for the piece at (row, col). Kings are
-// handled in a later ticket, so only forward moves apply for now.
+// Row directions a piece may move/jump in: both ways for a king, forward
+// only for a normal piece.
+function pieceDirections(piece) {
+  return piece.king ? [-1, 1] : [forwardDirection(piece.player)];
+}
+
+// Legal non-capturing moves for the piece at (row, col).
 function getLegalMoves(board, row, col) {
   const piece = board[row][col];
   if (!piece) return [];
 
   const moves = [];
-  const newRow = row + forwardDirection(piece.player);
-  for (const dc of [-1, 1]) {
-    const newCol = col + dc;
-    if (inBounds(newRow, newCol) && board[newRow][newCol] === null) {
-      moves.push({ row: newRow, col: newCol });
+  for (const dr of pieceDirections(piece)) {
+    const newRow = row + dr;
+    for (const dc of [-1, 1]) {
+      const newCol = col + dc;
+      if (inBounds(newRow, newCol) && board[newRow][newCol] === null) {
+        moves.push({ row: newRow, col: newCol });
+      }
     }
   }
   return moves;
 }
 
-// Legal forward jumps for the piece at (row, col): an adjacent enemy piece
-// with an empty landing square right behind it.
+// Legal jumps for the piece at (row, col): an adjacent enemy piece with an
+// empty landing square right behind it.
 function getJumpMoves(board, row, col) {
   const piece = board[row][col];
   if (!piece) return [];
 
-  const dir = forwardDirection(piece.player);
   const moves = [];
-  for (const dc of [-1, 1]) {
-    const midRow = row + dir;
-    const midCol = col + dc;
-    const landRow = row + 2 * dir;
-    const landCol = col + 2 * dc;
-    if (!inBounds(landRow, landCol)) continue;
+  for (const dr of pieceDirections(piece)) {
+    for (const dc of [-1, 1]) {
+      const midRow = row + dr;
+      const midCol = col + dc;
+      const landRow = row + 2 * dr;
+      const landCol = col + 2 * dc;
+      if (!inBounds(landRow, landCol)) continue;
 
-    const midPiece = board[midRow][midCol];
-    if (midPiece && midPiece.player !== piece.player && board[landRow][landCol] === null) {
-      moves.push({ row: landRow, col: landCol, capturedRow: midRow, capturedCol: midCol });
+      const midPiece = board[midRow][midCol];
+      if (midPiece && midPiece.player !== piece.player && board[landRow][landCol] === null) {
+        moves.push({ row: landRow, col: landCol, capturedRow: midRow, capturedCol: midCol });
+      }
     }
   }
   return moves;
+}
+
+function farRowFor(player) {
+  return player === 'black' ? 0 : BOARD_SIZE - 1;
 }
 
 function anyJumpsAvailable(board, player) {
@@ -128,7 +140,8 @@ function handleSquareClick(row, col) {
   if (selected) {
     const move = state.legalMoves.find((m) => m.row === row && m.col === col);
     if (move) {
-      board[row][col] = board[selected.row][selected.col];
+      const movedPiece = board[selected.row][selected.col];
+      board[row][col] = movedPiece;
       board[selected.row][selected.col] = null;
 
       const wasJump = move.capturedRow !== undefined;
@@ -136,7 +149,14 @@ function handleSquareClick(row, col) {
         board[move.capturedRow][move.capturedCol] = null;
       }
 
-      const furtherJumps = wasJump ? getJumpMoves(board, row, col) : [];
+      let justPromoted = false;
+      if (!movedPiece.king && row === farRowFor(movedPiece.player)) {
+        movedPiece.king = true;
+        justPromoted = true;
+      }
+
+      // A king crowned mid-chain stops immediately, even if it could jump again.
+      const furtherJumps = wasJump && !justPromoted ? getJumpMoves(board, row, col) : [];
       if (furtherJumps.length > 0) {
         state.selected = { row, col };
         state.legalMoves = furtherJumps;
@@ -198,7 +218,7 @@ function renderBoard() {
       const piece = state.board[row][col];
       if (piece) {
         const pieceEl = document.createElement('div');
-        pieceEl.className = `piece ${piece.player}`;
+        pieceEl.className = `piece ${piece.player}${piece.king ? ' king' : ''}`;
         square.appendChild(pieceEl);
       }
 
