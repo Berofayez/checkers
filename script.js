@@ -138,6 +138,24 @@ function checkForWinner() {
 
 const DRAW_LIMIT = 40;
 
+function cloneBoard(board) {
+  return board.map((row) => row.map((cell) => (cell ? { ...cell } : null)));
+}
+
+// A snapshot of everything Undo needs to restore: the board and the turn
+// bookkeeping. Selection/legalMoves/mustContinue aren't included because
+// they're always cleared at a turn boundary, which is the only point a
+// snapshot is taken.
+function snapshotState() {
+  return {
+    board: cloneBoard(state.board),
+    currentPlayer: state.currentPlayer,
+    winner: state.winner,
+    draw: state.draw,
+    noProgressCount: state.noProgressCount,
+  };
+}
+
 const state = {
   board: createInitialBoard(),
   currentPlayer: 'black',
@@ -148,7 +166,15 @@ const state = {
   draw: false,
   noProgressCount: 0,
   turnHadProgress: false,
+  // Stack of snapshots, one per completed turn, each taken *before* that
+  // turn started. Undo pops the most recent one to step back exactly one
+  // turn, chain included.
+  undoStack: [],
+  // Snapshot of the turn currently in progress, taken when it began.
+  turnStartSnapshot: null,
 };
+
+state.turnStartSnapshot = snapshotState();
 
 // Draws are counted in whole turns with no capture and no new king, even
 // across a multi-jump chain, so progress is accumulated until the turn ends.
@@ -224,6 +250,9 @@ function handleSquareClick(row, col) {
         if (!state.winner) {
           checkForDraw();
         }
+
+        state.undoStack.push(state.turnStartSnapshot);
+        state.turnStartSnapshot = snapshotState();
       }
       render();
       return;
@@ -321,9 +350,32 @@ function resetGame() {
   state.draw = false;
   state.noProgressCount = 0;
   state.turnHadProgress = false;
+  state.undoStack = [];
+  state.turnStartSnapshot = snapshotState();
+  render();
+}
+
+// Steps back exactly one completed turn (a multi-jump chain counts as one),
+// restoring the board, whose turn it is, and the draw counter. Does nothing
+// if no turn has been completed yet.
+function undo() {
+  if (state.undoStack.length === 0) return;
+
+  const previous = state.undoStack.pop();
+  state.board = previous.board;
+  state.currentPlayer = previous.currentPlayer;
+  state.winner = previous.winner;
+  state.draw = previous.draw;
+  state.noProgressCount = previous.noProgressCount;
+  state.turnHadProgress = false;
+  state.selected = null;
+  state.legalMoves = [];
+  state.mustContinue = false;
+  state.turnStartSnapshot = snapshotState();
   render();
 }
 
 document.getElementById('new-game').addEventListener('click', resetGame);
+document.getElementById('undo').addEventListener('click', undo);
 
 render();

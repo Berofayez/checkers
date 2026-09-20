@@ -96,6 +96,7 @@ body {
 }
 
 #new-game,
+#undo,
 #help-link {
   padding: 8px 16px;
   font-size: 1rem;
@@ -104,7 +105,8 @@ body {
   border-radius: 4px;
 }
 
-#new-game {
+#new-game,
+#undo {
   border: 1px solid #999;
   background: #fff;
 }
