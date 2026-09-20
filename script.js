@@ -109,12 +109,40 @@ function getSelectableMoves(board, row, col) {
   return getLegalMoves(board, row, col);
 }
 
+function hasAnyLegalMove(board, player) {
+  for (let row = 0; row < BOARD_SIZE; row++) {
+    for (let col = 0; col < BOARD_SIZE; col++) {
+      const piece = board[row][col];
+      if (piece && piece.player === player) {
+        if (getLegalMoves(board, row, col).length > 0 || getJumpMoves(board, row, col).length > 0) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+function otherPlayer(player) {
+  return player === 'black' ? 'white' : 'black';
+}
+
+// Checks whether the player now to move has already lost: no pieces left,
+// or pieces but no legal move (including no legal jump).
+function checkForWinner() {
+  const player = state.currentPlayer;
+  if (countPieces(state.board, player) === 0 || !hasAnyLegalMove(state.board, player)) {
+    state.winner = otherPlayer(player);
+  }
+}
+
 const state = {
   board: createInitialBoard(),
   currentPlayer: 'black',
   selected: null,
   legalMoves: [],
   mustContinue: false,
+  winner: null,
 };
 
 function countPieces(board, player) {
@@ -134,6 +162,8 @@ function isHighlighted(row, col) {
 }
 
 function handleSquareClick(row, col) {
+  if (state.winner) return;
+
   const { board, selected } = state;
   const piece = board[row][col];
 
@@ -165,7 +195,8 @@ function handleSquareClick(row, col) {
         state.selected = null;
         state.legalMoves = [];
         state.mustContinue = false;
-        state.currentPlayer = state.currentPlayer === 'black' ? 'white' : 'black';
+        state.currentPlayer = otherPlayer(state.currentPlayer);
+        checkForWinner();
       }
       render();
       return;
@@ -228,8 +259,14 @@ function renderBoard() {
 }
 
 function renderStatus() {
+  const statusEl = document.getElementById('status');
+  if (state.winner) {
+    const label = state.winner === 'black' ? 'Black' : 'White';
+    statusEl.textContent = `${label} wins`;
+    return;
+  }
   const label = state.currentPlayer === 'black' ? 'Black' : 'White';
-  document.getElementById('status').textContent = `${label} to move`;
+  statusEl.textContent = `${label} to move`;
 }
 
 function renderCounts() {
