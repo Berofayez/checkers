@@ -38,9 +38,12 @@ instead of 12.
 
 ## Computer opponent (future)
 - An optional mode where the computer plays one side instead of a second human. It only ever makes legal moves, and follows every rule a human player does (mandatory jumps, multi-jump chains, and so on).
-- **Move selection:** a minimax search a fixed number of moves deep over the legal moves available, scoring each resulting position with a simple heuristic (piece count, king count, board position). Alpha-beta pruning is an optional speed-up.
-- **Difficulty:** adjustable by changing the search depth and/or occasionally choosing a non-optimal move at random instead of the best-scoring one.
-- **Future upgrade:** the heuristic could later be replaced by a model trained through self-play reinforcement learning, without changing how the rest of the game calls "pick a move." That's a separate, larger effort (training pipeline, model storage) and isn't required for this feature to work.
+- **How it learns:** a reinforcement-learning agent trained entirely through self-play. It starts with no strategy and improves purely by playing itself — the same lineage as Arthur Samuel's 1959 self-learning checkers program.
+- **Value function:** the agent scores a board position with a weighted sum of a small set of features (piece count difference, king count difference, position and mobility, and so on). The weights are learned, not hand-tuned.
+- **Training method:** temporal-difference (TD) learning. After each self-play move, the value estimate of the position just left is nudged toward the value of the position that followed (plus the eventual win/loss/draw outcome), repeated over many thousands of self-play games.
+- **Where training happens:** offline, via a Node.js script separate from the browser game, reusing the same move-generation rules. It produces a small weights file with the learned numbers.
+- **Move selection during play:** the browser loads the trained weights and scores legal moves with them (optionally with a shallow lookahead), picking the best-scoring move for the computer's side. No training happens while you're playing — it's instant.
+- **Difficulty:** could vary by which training checkpoint's weights are loaded, or by occasionally picking a non-optimal move at random instead of the best-scoring one.
 - A **Play vs Computer** control starts this mode. Which side the computer plays is decided when this is implemented.
 
 ## Screen
