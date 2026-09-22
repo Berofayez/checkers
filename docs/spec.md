@@ -36,6 +36,13 @@ instead of 12.
 - **Win:** if the player whose turn it is has no pieces or no legal move, the other player wins.
 - **Draw:** if 40 turns in a row pass with no capture and no new king, the game is a draw.
 
+## Computer opponent (future)
+- An optional mode where the computer plays one side instead of a second human. It only ever makes legal moves, and follows every rule a human player does (mandatory jumps, multi-jump chains, and so on).
+- **Move selection:** a minimax search a fixed number of moves deep over the legal moves available, scoring each resulting position with a simple heuristic (piece count, king count, board position). Alpha-beta pruning is an optional speed-up.
+- **Difficulty:** adjustable by changing the search depth and/or occasionally choosing a non-optimal move at random instead of the best-scoring one.
+- **Future upgrade:** the heuristic could later be replaced by a model trained through self-play reinforcement learning, without changing how the rest of the game calls "pick a move." That's a separate, larger effort (training pipeline, model storage) and isn't required for this feature to work.
+- A **Play vs Computer** control starts this mode. Which side the computer plays is decided when this is implemented.
+
 ## Screen
 - The board, with pieces as circles and kings shown with a crown mark.
 - A status line: "Black to move", "White to move", "Black wins", "White wins", or "Draw".
@@ -47,4 +54,4 @@ instead of 12.
 - A **New game** button resets the board.
 
 ## Not in this version (maybe later)
-Playing against the computer, online play, undo, sounds, animations, saving a game.
+Online play, sounds, saving a game.
