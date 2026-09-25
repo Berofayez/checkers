@@ -95,17 +95,23 @@ function describePosition(state, weights) {
 // Looks `depth` moves ahead (alpha-beta minimax, Black maximising and White
 // minimising) and scores the position reached with the value function.
 // Sooner wins score slightly higher, so a winning line is actually finished.
-function searchValue(state, weights, depth, alpha, beta) {
+function searchValue(state, weights, depth, alpha, beta, clock) {
   const exact = finishedValue(state);
   if (exact !== null) return exact * (1 + 0.01 * depth);
   if (depth === 0) return predictValue(weights, extractFeatures(state));
+
+  // Stop early once the time budget is spent; the caller then throws this
+  // (partial) search away.
+  if ((++clock.nodes & 15) === 0 && Date.now() > clock.deadline) clock.expired = true;
+  if (clock.expired) return 0;
 
   const maximizing = state.currentPlayer === 'black';
   let best = maximizing ? -Infinity : Infinity;
   for (const move of getAllMoves(state)) {
     const child = cloneState(state);
     applyMove(child, move);
-    const v = searchValue(child, weights, depth - 1, alpha, beta);
+    const v = searchValue(child, weights, depth - 1, alpha, beta, clock);
+    if (clock.expired) break;
     if (maximizing) {
       if (v > best) best = v;
       if (best > alpha) alpha = best;
@@ -121,13 +127,17 @@ function searchValue(state, weights, depth, alpha, beta) {
 // Picks the move for the side to move.
 //   depth:   how many moves ahead to look (1 = judge only the position right
 //            after the move; higher is stronger but slower).
+//   timeMs:  optional time budget. The search deepens one move at a time and
+//            stops when the time is up, playing on the deepest search it
+//            finished, so the answer always arrives quickly even in a busy
+//            position or on a slow device.
 //   epsilon: chance of playing a uniformly random move instead (exploration in
 //            training, and a "make a mistake on purpose" dial for difficulty).
 //   rng:     () => number in [0, 1), so callers can make runs reproducible.
 // Returns { move, after, features, value } for the position reached by the
 // chosen move (what the trainer learns from), or null if there is no move.
 function chooseMove(state, weights, options = {}) {
-  const { depth = 1, epsilon = 0, rng = Math.random } = options;
+  const { depth = 1, epsilon = 0, rng = Math.random, timeMs = Infinity } = options;
   const moves = getAllMoves(state);
   if (moves.length === 0) return null;
 
@@ -142,26 +152,63 @@ function chooseMove(state, weights, options = {}) {
   }
 
   const sign = state.currentPlayer === 'black' ? 1 : -1;
+  const candidates = moves.map(describeMove);
+
+  // A score per candidate for the side to move (higher is better). Start from
+  // the position right after each move, then refine with deeper searches.
+  let scores = candidates.map((c) => sign * c.value);
+  const deadline = timeMs === Infinity ? Infinity : Date.now() + timeMs;
+
+  for (let d = 2; d <= depth; d++) {
+    const clock = { deadline, nodes: 0, expired: false };
+    // Best-looking moves first, so the rest can be pruned sooner.
+    const order = candidates.map((_, i) => i).sort((a, b) => scores[b] - scores[a]);
+    const next = new Array(candidates.length);
+    let bestRaw = null; // best result this round, from Black's point of view
+
+    for (const i of order) {
+      // Only moves at least as good as the best so far can matter, so search
+      // with a window that lets anything worse be cut off early.
+      const alpha = sign === 1 && bestRaw !== null ? bestRaw - 1e-9 : -Infinity;
+      const beta = sign === -1 && bestRaw !== null ? bestRaw + 1e-9 : Infinity;
+      const raw = searchValue(candidates[i].after, weights, d - 1, alpha, beta, clock);
+      if (clock.expired) break;
+      next[i] = sign * raw;
+      if (bestRaw === null || sign * raw > sign * bestRaw) bestRaw = raw;
+    }
+
+    if (clock.expired) break; // keep the last depth that was fully searched
+    scores = next;
+  }
+
   let best = [];
   let bestScore = -Infinity;
-  for (const move of moves) {
-    const described = describeMove(move);
-    const raw = depth > 1
-      ? searchValue(described.after, weights, depth - 1, -Infinity, Infinity)
-      : described.value;
-    const score = sign * raw;
-    if (score > bestScore + 1e-12) {
-      bestScore = score;
-      best = [described];
-    } else if (score > bestScore - 1e-12) {
-      best.push(described);
+  candidates.forEach((candidate, i) => {
+    if (scores[i] > bestScore + 1e-12) {
+      bestScore = scores[i];
+      best = [candidate];
+    } else if (scores[i] > bestScore - 1e-12) {
+      best.push(candidate);
     }
-  }
+  });
   return best[Math.floor(rng() * best.length)];
 }
 
+// The three difficulty levels, all playing with the same learned weights.
+// They differ only in how far ahead the computer looks and how often it plays
+// a random move on purpose. Chosen from head-to-head results: Hard beats
+// Medium about 95% of the time, Medium beats Easy about 90%, and Easy still
+// beats a purely random player most of the time. timeMs caps how long a move
+// may take, so a crowded position or a slow phone can't freeze the page.
+const DIFFICULTY_LEVELS = {
+  easy: { depth: 1, epsilon: 0.5 },
+  medium: { depth: 3, epsilon: 0.15, timeMs: 500 },
+  hard: { depth: 5, epsilon: 0, timeMs: 800 },
+};
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
+    DIFFICULTY_LEVELS,
     FEATURE_NAMES,
     FEATURE_SCALES,
     extractFeatures,

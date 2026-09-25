@@ -43,7 +43,7 @@ instead of 12.
 - **Training method:** temporal-difference (TD) learning. After each self-play move, the value estimate of the position just left is nudged toward the value of the position that followed (plus the eventual win/loss/draw outcome), repeated over many thousands of self-play games.
 - **Where training happens:** offline, via a Node.js script separate from the browser game, reusing the same move-generation rules. It produces a small weights file with the learned numbers.
 - **Move selection during play:** the browser loads the trained weights and scores legal moves with them (optionally with a shallow lookahead), picking the best-scoring move for the computer's side. No training happens while you're playing — it's instant.
-- **Difficulty:** three levels (Easy, Medium, Hard) built on the one trained model. Hard always plays the best-scoring move; Medium and Easy occasionally play a non-optimal move on purpose instead, more often on Easy, so both are genuinely beatable.
+- **Difficulty:** three levels (Easy, Medium, Hard) built on the one trained model. Hard looks furthest ahead and always plays its best move; Medium and Easy look fewer moves ahead and sometimes play a random move on purpose, more often on Easy, so both are genuinely beatable. The player can change the level at any time, and it takes effect on the computer's next move. A time limit on each move keeps the computer quick to answer even on a slow device.
 - The player chooses between two modes: **Play with a friend** (two people taking turns on the same screen) and **Play vs Computer**. In vs Computer mode the human plays Black and moves first, the computer plays White, and the player also picks a difficulty level.
 
 ## Screen

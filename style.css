@@ -176,3 +176,28 @@ body {
   font-size: 0.95rem;
   color: #5a3e2b;
 }
+
+#difficulty-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 0.95rem;
+}
+
+.level-button {
+  padding: 6px 14px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  color: #222;
+  background: #fff;
+  border: 1px solid #999;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.level-button.active {
+  color: #fff;
+  background: #5a3e2b;
+  border-color: #5a3e2b;
+}

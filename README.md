@@ -18,7 +18,8 @@ required.
 - Click-to-select play with legal-move and mandatory-jump highlighting.
 - Two ways to play: **with a friend** on the same screen, or **vs the
   computer**, an AI that taught itself by playing itself (self-play
-  reinforcement learning).
+  reinforcement learning), with **Easy, Medium and Hard** levels you can
+  switch between at any time.
 - **New game** button to reset the board at any time.
 - **Undo** button that steps back one full turn at a time (a multi-jump
   chain undoes as a single unit), all the way to the start of the game.

@@ -11,9 +11,9 @@ const ui = {
   // 'friend' (two people on one screen), 'computer', or null while the
   // mode menu is showing.
   mode: null,
-  // How the computer plays: moves of lookahead, and the chance of a
-  // deliberately random move.
-  aiOptions: { depth: 3, epsilon: 0 },
+  // 'easy' | 'medium' | 'hard' (see DIFFICULTY_LEVELS in ai.js). Changing it
+  // takes effect on the computer's next move.
+  difficulty: 'medium',
   computerTimer: null,
   selected: null,
   legalMoves: [],
@@ -57,7 +57,7 @@ function computerMove() {
   ui.computerTimer = null;
   if (!isComputerTurn()) return;
 
-  const choice = chooseMove(game, WEIGHTS.weights, ui.aiOptions);
+  const choice = chooseMove(game, WEIGHTS.weights, DIFFICULTY_LEVELS[ui.difficulty]);
   if (choice) playMove(choice.move);
 }
 
@@ -178,12 +178,20 @@ function renderCounts() {
 }
 
 function renderModeLabel() {
+  const levelName = ui.difficulty.charAt(0).toUpperCase() + ui.difficulty.slice(1);
   const label = ui.mode === 'computer'
-    ? 'Playing vs Computer — you are Black'
+    ? `Playing vs Computer (${levelName}) — you are Black`
     : ui.mode === 'friend'
       ? 'Playing with a friend'
       : '';
   document.getElementById('mode-label').textContent = label;
+
+  document.getElementById('difficulty-picker').hidden = ui.mode !== 'computer';
+  for (const button of document.querySelectorAll('.level-button')) {
+    const active = button.dataset.level === ui.difficulty;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
+  }
 }
 
 function render() {
@@ -247,5 +255,11 @@ document.getElementById('mode-computer').addEventListener('click', () => startGa
 document.getElementById('change-mode').addEventListener('click', showModeMenu);
 document.getElementById('new-game').addEventListener('click', resetGame);
 document.getElementById('undo').addEventListener('click', undo);
+for (const button of document.querySelectorAll('.level-button')) {
+  button.addEventListener('click', () => {
+    ui.difficulty = button.dataset.level;
+    render();
+  });
+}
 
 render();
