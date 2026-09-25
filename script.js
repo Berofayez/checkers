@@ -1,277 +1,60 @@
-const BOARD_SIZE = 8;
+// UI glue: rendering, clicks, and undo history. All rules live in engine.js.
 
-function isDarkSquare(row, col) {
-  return (row + col) % 2 === 1;
-}
+const game = createInitialState();
 
-function createInitialBoard() {
-  const board = [];
-  for (let row = 0; row < BOARD_SIZE; row++) {
-    const rowCells = [];
-    for (let col = 0; col < BOARD_SIZE; col++) {
-      let piece = null;
-      if (isDarkSquare(row, col)) {
-        if (row <= 1) {
-          piece = { player: 'white', king: false };
-        } else if (row >= 6) {
-          piece = { player: 'black', king: false };
-        }
-      }
-      rowCells.push(piece);
-    }
-    board.push(rowCells);
-  }
-  return board;
-}
-
-function inBounds(row, col) {
-  return row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE;
-}
-
-function forwardDirection(player) {
-  return player === 'black' ? -1 : 1;
-}
-
-// Row directions a piece may move/jump in: both ways for a king, forward
-// only for a normal piece.
-function pieceDirections(piece) {
-  return piece.king ? [-1, 1] : [forwardDirection(piece.player)];
-}
-
-// Legal non-capturing moves for the piece at (row, col).
-function getLegalMoves(board, row, col) {
-  const piece = board[row][col];
-  if (!piece) return [];
-
-  const moves = [];
-  for (const dr of pieceDirections(piece)) {
-    const newRow = row + dr;
-    for (const dc of [-1, 1]) {
-      const newCol = col + dc;
-      if (inBounds(newRow, newCol) && board[newRow][newCol] === null) {
-        moves.push({ row: newRow, col: newCol });
-      }
-    }
-  }
-  return moves;
-}
-
-// Legal jumps for the piece at (row, col): an adjacent enemy piece with an
-// empty landing square right behind it.
-function getJumpMoves(board, row, col) {
-  const piece = board[row][col];
-  if (!piece) return [];
-
-  const moves = [];
-  for (const dr of pieceDirections(piece)) {
-    for (const dc of [-1, 1]) {
-      const midRow = row + dr;
-      const midCol = col + dc;
-      const landRow = row + 2 * dr;
-      const landCol = col + 2 * dc;
-      if (!inBounds(landRow, landCol)) continue;
-
-      const midPiece = board[midRow][midCol];
-      if (midPiece && midPiece.player !== piece.player && board[landRow][landCol] === null) {
-        moves.push({ row: landRow, col: landCol, capturedRow: midRow, capturedCol: midCol });
-      }
-    }
-  }
-  return moves;
-}
-
-function farRowFor(player) {
-  return player === 'black' ? 0 : BOARD_SIZE - 1;
-}
-
-function anyJumpsAvailable(board, player) {
-  for (let row = 0; row < BOARD_SIZE; row++) {
-    for (let col = 0; col < BOARD_SIZE; col++) {
-      const piece = board[row][col];
-      if (piece && piece.player === player && getJumpMoves(board, row, col).length > 0) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-// Moves selectable for the piece at (row, col) this turn: if any of the
-// player's pieces can jump, jumping is mandatory, so only jumps qualify.
-function getSelectableMoves(board, row, col) {
-  const piece = board[row][col];
-  if (!piece) return [];
-
-  const jumps = getJumpMoves(board, row, col);
-  if (anyJumpsAvailable(board, piece.player)) {
-    return jumps;
-  }
-  return getLegalMoves(board, row, col);
-}
-
-function hasAnyLegalMove(board, player) {
-  for (let row = 0; row < BOARD_SIZE; row++) {
-    for (let col = 0; col < BOARD_SIZE; col++) {
-      const piece = board[row][col];
-      if (piece && piece.player === player) {
-        if (getLegalMoves(board, row, col).length > 0 || getJumpMoves(board, row, col).length > 0) {
-          return true;
-        }
-      }
-    }
-  }
-  return false;
-}
-
-function otherPlayer(player) {
-  return player === 'black' ? 'white' : 'black';
-}
-
-// Checks whether the player now to move has already lost: no pieces left,
-// or pieces but no legal move (including no legal jump).
-function checkForWinner() {
-  const player = state.currentPlayer;
-  if (countPieces(state.board, player) === 0 || !hasAnyLegalMove(state.board, player)) {
-    state.winner = otherPlayer(player);
-  }
-}
-
-const DRAW_LIMIT = 40;
-
-function cloneBoard(board) {
-  return board.map((row) => row.map((cell) => (cell ? { ...cell } : null)));
-}
-
-// A snapshot of everything Undo needs to restore: the board and the turn
-// bookkeeping. Selection/legalMoves/mustContinue aren't included because
-// they're always cleared at a turn boundary, which is the only point a
-// snapshot is taken.
-function snapshotState() {
-  return {
-    board: cloneBoard(state.board),
-    currentPlayer: state.currentPlayer,
-    winner: state.winner,
-    draw: state.draw,
-    noProgressCount: state.noProgressCount,
-  };
-}
-
-const state = {
-  board: createInitialBoard(),
-  currentPlayer: 'black',
+const ui = {
   selected: null,
   legalMoves: [],
-  mustContinue: false,
-  winner: null,
-  draw: false,
-  noProgressCount: 0,
-  turnHadProgress: false,
   // Stack of snapshots, one per completed turn, each taken *before* that
   // turn started. Undo pops the most recent one to step back exactly one
   // turn, chain included.
   undoStack: [],
   // Snapshot of the turn currently in progress, taken when it began.
-  turnStartSnapshot: null,
+  turnStartSnapshot: cloneState(game),
 };
 
-state.turnStartSnapshot = snapshotState();
-
-// Draws are counted in whole turns with no capture and no new king, even
-// across a multi-jump chain, so progress is accumulated until the turn ends.
-function checkForDraw() {
-  if (state.turnHadProgress) {
-    state.noProgressCount = 0;
-  } else {
-    state.noProgressCount += 1;
-  }
-  state.turnHadProgress = false;
-
-  if (state.noProgressCount >= DRAW_LIMIT) {
-    state.draw = true;
-  }
-}
-
-function countPieces(board, player) {
-  let count = 0;
-  for (const row of board) {
-    for (const cell of row) {
-      if (cell && cell.player === player) {
-        count++;
-      }
-    }
-  }
-  return count;
-}
-
 function isHighlighted(row, col) {
-  return state.legalMoves.some((m) => m.row === row && m.col === col);
+  return ui.legalMoves.some((m) => m.row === row && m.col === col);
+}
+
+function playMove(move) {
+  const { turnEnded } = applyMove(game, move);
+  if (turnEnded) {
+    ui.selected = null;
+    ui.legalMoves = [];
+    ui.undoStack.push(ui.turnStartSnapshot);
+    ui.turnStartSnapshot = cloneState(game);
+  } else {
+    ui.selected = { row: game.chainRow, col: game.chainCol };
+    ui.legalMoves = getAllMoves(game);
+  }
+  render();
 }
 
 function handleSquareClick(row, col) {
-  if (state.winner || state.draw) return;
+  if (game.winner || game.draw) return;
 
-  const { board, selected } = state;
-  const piece = board[row][col];
-
-  if (selected) {
-    const move = state.legalMoves.find((m) => m.row === row && m.col === col);
+  if (ui.selected) {
+    const move = ui.legalMoves.find((m) => m.row === row && m.col === col);
     if (move) {
-      const movedPiece = board[selected.row][selected.col];
-      board[row][col] = movedPiece;
-      board[selected.row][selected.col] = null;
-
-      const wasJump = move.capturedRow !== undefined;
-      if (wasJump) {
-        board[move.capturedRow][move.capturedCol] = null;
-      }
-
-      let justPromoted = false;
-      if (!movedPiece.king && row === farRowFor(movedPiece.player)) {
-        movedPiece.king = true;
-        justPromoted = true;
-      }
-
-      if (wasJump || justPromoted) {
-        state.turnHadProgress = true;
-      }
-
-      // A king crowned mid-chain stops immediately, even if it could jump again.
-      const furtherJumps = wasJump && !justPromoted ? getJumpMoves(board, row, col) : [];
-      if (furtherJumps.length > 0) {
-        state.selected = { row, col };
-        state.legalMoves = furtherJumps;
-        state.mustContinue = true;
-      } else {
-        state.selected = null;
-        state.legalMoves = [];
-        state.mustContinue = false;
-        state.currentPlayer = otherPlayer(state.currentPlayer);
-        checkForWinner();
-        if (!state.winner) {
-          checkForDraw();
-        }
-
-        state.undoStack.push(state.turnStartSnapshot);
-        state.turnStartSnapshot = snapshotState();
-      }
-      render();
+      playMove(move);
       return;
     }
 
-    if (state.mustContinue) {
+    if (game.mustContinue) {
       // Mid multi-jump: no other piece can move until the chain ends.
       return;
     }
   }
 
-  if (piece && piece.player === state.currentPlayer) {
-    const moves = getSelectableMoves(board, row, col);
+  const piece = game.board[row][col];
+  if (piece && piece.player === game.currentPlayer) {
+    const moves = getAllMoves(game).filter((m) => m.fromRow === row && m.fromCol === col);
     if (moves.length > 0) {
-      state.selected = { row, col };
-      state.legalMoves = moves;
+      ui.selected = { row, col };
+      ui.legalMoves = moves;
       render();
     }
-    return;
   }
 
   // Clicking an opponent's piece, an empty non-highlighted square, or an
@@ -280,29 +63,35 @@ function handleSquareClick(row, col) {
 
 function renderBoard() {
   const boardEl = document.getElementById('board');
-  const jumpsRequired = anyJumpsAvailable(state.board, state.currentPlayer);
+
+  // Squares holding a piece that must jump (only when a jump is required).
+  const jumpable = new Set();
+  if (!ui.selected) {
+    for (const m of getAllMoves(game)) {
+      if (m.capturedRow !== undefined) {
+        jumpable.add(m.fromRow * BOARD_SIZE + m.fromCol);
+      }
+    }
+  }
 
   boardEl.innerHTML = '';
   for (let row = 0; row < BOARD_SIZE; row++) {
     for (let col = 0; col < BOARD_SIZE; col++) {
       const square = document.createElement('div');
       const classes = ['square', isDarkSquare(row, col) ? 'dark' : 'light'];
-      if (state.selected && state.selected.row === row && state.selected.col === col) {
+      if (ui.selected && ui.selected.row === row && ui.selected.col === col) {
         classes.push('selected');
       }
       if (isHighlighted(row, col)) {
         classes.push('highlight');
       }
-      if (!state.selected && jumpsRequired) {
-        const piece = state.board[row][col];
-        if (piece && piece.player === state.currentPlayer && getJumpMoves(state.board, row, col).length > 0) {
-          classes.push('jumpable');
-        }
+      if (jumpable.has(row * BOARD_SIZE + col)) {
+        classes.push('jumpable');
       }
       square.className = classes.join(' ');
       square.addEventListener('click', () => handleSquareClick(row, col));
 
-      const piece = state.board[row][col];
+      const piece = game.board[row][col];
       if (piece) {
         const pieceEl = document.createElement('div');
         pieceEl.className = `piece ${piece.player}${piece.king ? ' king' : ''}`;
@@ -316,22 +105,22 @@ function renderBoard() {
 
 function renderStatus() {
   const statusEl = document.getElementById('status');
-  if (state.winner) {
-    const label = state.winner === 'black' ? 'Black' : 'White';
+  if (game.winner) {
+    const label = game.winner === 'black' ? 'Black' : 'White';
     statusEl.textContent = `${label} wins`;
     return;
   }
-  if (state.draw) {
+  if (game.draw) {
     statusEl.textContent = 'Draw';
     return;
   }
-  const label = state.currentPlayer === 'black' ? 'Black' : 'White';
+  const label = game.currentPlayer === 'black' ? 'Black' : 'White';
   statusEl.textContent = `${label} to move`;
 }
 
 function renderCounts() {
-  document.getElementById('black-count').textContent = `Black: ${countPieces(state.board, 'black')}`;
-  document.getElementById('white-count').textContent = `White: ${countPieces(state.board, 'white')}`;
+  document.getElementById('black-count').textContent = `Black: ${countPieces(game.board, 'black')}`;
+  document.getElementById('white-count').textContent = `White: ${countPieces(game.board, 'white')}`;
 }
 
 function render() {
@@ -341,17 +130,11 @@ function render() {
 }
 
 function resetGame() {
-  state.board = createInitialBoard();
-  state.currentPlayer = 'black';
-  state.selected = null;
-  state.legalMoves = [];
-  state.mustContinue = false;
-  state.winner = null;
-  state.draw = false;
-  state.noProgressCount = 0;
-  state.turnHadProgress = false;
-  state.undoStack = [];
-  state.turnStartSnapshot = snapshotState();
+  Object.assign(game, createInitialState());
+  ui.selected = null;
+  ui.legalMoves = [];
+  ui.undoStack = [];
+  ui.turnStartSnapshot = cloneState(game);
   render();
 }
 
@@ -359,19 +142,12 @@ function resetGame() {
 // restoring the board, whose turn it is, and the draw counter. Does nothing
 // if no turn has been completed yet.
 function undo() {
-  if (state.undoStack.length === 0) return;
+  if (ui.undoStack.length === 0) return;
 
-  const previous = state.undoStack.pop();
-  state.board = previous.board;
-  state.currentPlayer = previous.currentPlayer;
-  state.winner = previous.winner;
-  state.draw = previous.draw;
-  state.noProgressCount = previous.noProgressCount;
-  state.turnHadProgress = false;
-  state.selected = null;
-  state.legalMoves = [];
-  state.mustContinue = false;
-  state.turnStartSnapshot = snapshotState();
+  Object.assign(game, ui.undoStack.pop());
+  ui.selected = null;
+  ui.legalMoves = [];
+  ui.turnStartSnapshot = cloneState(game);
   render();
 }
 

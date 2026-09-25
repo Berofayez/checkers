@@ -24,7 +24,9 @@ required.
 
 ## Project structure
 
-- `index.html`, `script.js`, `style.css` — the game itself.
+- `engine.js` — the game rules and move logic, with no DOM access, so the
+  browser UI and (later) the AI trainer share exactly the same code.
+- `index.html`, `script.js`, `style.css` — the game's screen and controls.
 - `help.html` — the in-app instructions page, self-contained.
 - `docs/spec.md` — the full rules specification the game is built against.
 - `tickets/` — the project's development history as a sequence of small,
