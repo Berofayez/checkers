@@ -26,7 +26,8 @@ weights file the browser can later use to play.
       uniformly among its legal moves and clearly beats it (gate: at least
       85% wins) before the weights are written.
 - [x] The learned weights are written to a small `weights.json` committed to
-      the repo.
+      the repo, plus `weights.js` (the same data as a plain script the page
+      can load, added in ticket 16).
 
 ## Verification notes
 - **First attempt failed the gate, as the gate exists to catch.** With 7

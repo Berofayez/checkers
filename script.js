@@ -1,8 +1,20 @@
-// UI glue: rendering, clicks, and undo history. All rules live in engine.js.
+// UI glue: rendering, clicks, modes, and undo history. All rules live in
+// engine.js, and the computer's move choice lives in ai.js.
+
+const HUMAN_SIDE = 'black';
+const COMPUTER_SIDE = 'white';
+const COMPUTER_DELAY_MS = 600;
 
 const game = createInitialState();
 
 const ui = {
+  // 'friend' (two people on one screen), 'computer', or null while the
+  // mode menu is showing.
+  mode: null,
+  // How the computer plays: moves of lookahead, and the chance of a
+  // deliberately random move.
+  aiOptions: { depth: 3, epsilon: 0 },
+  computerTimer: null,
   selected: null,
   legalMoves: [],
   // Stack of snapshots, one per completed turn, each taken *before* that
@@ -13,26 +25,67 @@ const ui = {
   turnStartSnapshot: cloneState(game),
 };
 
+const menuEl = document.getElementById('mode-menu');
+const gameEl = document.getElementById('game');
+
+function isComputerTurn() {
+  return ui.mode === 'computer'
+    && game.currentPlayer === COMPUTER_SIDE
+    && !game.winner
+    && !game.draw;
+}
+
 function isHighlighted(row, col) {
   return ui.legalMoves.some((m) => m.row === row && m.col === col);
 }
 
+function cancelComputerMove() {
+  clearTimeout(ui.computerTimer);
+  ui.computerTimer = null;
+}
+
+// Lets the computer play after a short pause so its move is easy to follow.
+// A multi-jump is played one jump at a time, each after its own pause.
+function scheduleComputerMove() {
+  cancelComputerMove();
+  if (isComputerTurn()) {
+    ui.computerTimer = setTimeout(computerMove, COMPUTER_DELAY_MS);
+  }
+}
+
+function computerMove() {
+  ui.computerTimer = null;
+  if (!isComputerTurn()) return;
+
+  const choice = chooseMove(game, WEIGHTS.weights, ui.aiOptions);
+  if (choice) playMove(choice.move);
+}
+
+// The one path every move takes, whether a person clicked it or the
+// computer chose it.
 function playMove(move) {
+  const computerMoved = ui.mode === 'computer' && game.currentPlayer === COMPUTER_SIDE;
   const { turnEnded } = applyMove(game, move);
+
   if (turnEnded) {
     ui.selected = null;
     ui.legalMoves = [];
     ui.undoStack.push(ui.turnStartSnapshot);
     ui.turnStartSnapshot = cloneState(game);
+  } else if (computerMoved) {
+    ui.selected = null;
+    ui.legalMoves = [];
   } else {
     ui.selected = { row: game.chainRow, col: game.chainCol };
     ui.legalMoves = getAllMoves(game);
   }
+
   render();
+  scheduleComputerMove();
 }
 
 function handleSquareClick(row, col) {
-  if (game.winner || game.draw) return;
+  if (game.winner || game.draw || isComputerTurn()) return;
 
   if (ui.selected) {
     const move = ui.legalMoves.find((m) => m.row === row && m.col === col);
@@ -64,9 +117,10 @@ function handleSquareClick(row, col) {
 function renderBoard() {
   const boardEl = document.getElementById('board');
 
-  // Squares holding a piece that must jump (only when a jump is required).
+  // Squares holding a piece that must jump (only when a jump is required, and
+  // only on a person's turn, never while the computer is about to move).
   const jumpable = new Set();
-  if (!ui.selected) {
+  if (!ui.selected && !isComputerTurn()) {
     for (const m of getAllMoves(game)) {
       if (m.capturedRow !== undefined) {
         jumpable.add(m.fromRow * BOARD_SIZE + m.fromCol);
@@ -123,13 +177,25 @@ function renderCounts() {
   document.getElementById('white-count').textContent = `White: ${countPieces(game.board, 'white')}`;
 }
 
+function renderModeLabel() {
+  const label = ui.mode === 'computer'
+    ? 'Playing vs Computer — you are Black'
+    : ui.mode === 'friend'
+      ? 'Playing with a friend'
+      : '';
+  document.getElementById('mode-label').textContent = label;
+}
+
 function render() {
   renderBoard();
   renderStatus();
   renderCounts();
+  renderModeLabel();
 }
 
+// Restarts in the mode currently being played.
 function resetGame() {
+  cancelComputerMove();
   Object.assign(game, createInitialState());
   ui.selected = null;
   ui.legalMoves = [];
@@ -140,17 +206,45 @@ function resetGame() {
 
 // Steps back exactly one completed turn (a multi-jump chain counts as one),
 // restoring the board, whose turn it is, and the draw counter. Does nothing
-// if no turn has been completed yet.
+// if no turn has been completed yet. Against the computer it steps back a
+// full round (your move and its reply) so you land on your own turn rather
+// than the computer's.
 function undo() {
   if (ui.undoStack.length === 0) return;
 
-  Object.assign(game, ui.undoStack.pop());
+  cancelComputerMove();
+  let snapshot = ui.undoStack.pop();
+  if (ui.mode === 'computer') {
+    while (snapshot.currentPlayer !== HUMAN_SIDE && ui.undoStack.length > 0) {
+      snapshot = ui.undoStack.pop();
+    }
+  }
+
+  Object.assign(game, snapshot);
   ui.selected = null;
   ui.legalMoves = [];
   ui.turnStartSnapshot = cloneState(game);
   render();
+  scheduleComputerMove();
 }
 
+function startGame(mode) {
+  ui.mode = mode;
+  menuEl.hidden = true;
+  gameEl.hidden = false;
+  resetGame();
+}
+
+function showModeMenu() {
+  cancelComputerMove();
+  ui.mode = null;
+  gameEl.hidden = true;
+  menuEl.hidden = false;
+}
+
+document.getElementById('mode-friend').addEventListener('click', () => startGame('friend'));
+document.getElementById('mode-computer').addEventListener('click', () => startGame('computer'));
+document.getElementById('change-mode').addEventListener('click', showModeMenu);
 document.getElementById('new-game').addEventListener('click', resetGame);
 document.getElementById('undo').addEventListener('click', undo);
 

@@ -6,18 +6,33 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="status">Black to move</div>
-  <div id="board"></div>
-  <div id="piece-counts">
-    <span id="black-count">Black: 8</span>
-    <span id="white-count">White: 8</span>
+  <div id="mode-menu">
+    <h1>Checkers</h1>
+    <p>How do you want to play?</p>
+    <button id="mode-friend" class="mode-button">Play with a friend</button>
+    <button id="mode-computer" class="mode-button">Play vs Computer</button>
+    <a id="menu-help-link" href="help.html" target="_blank" rel="noopener">How to play</a>
   </div>
-  <div id="controls">
-    <button id="new-game">New game</button>
-    <button id="undo">Undo</button>
-    <a id="help-link" href="help.html" target="_blank" rel="noopener">Help</a>
+
+  <div id="game" hidden>
+    <div id="mode-label"></div>
+    <div id="status">Black to move</div>
+    <div id="board"></div>
+    <div id="piece-counts">
+      <span id="black-count">Black: 8</span>
+      <span id="white-count">White: 8</span>
+    </div>
+    <div id="controls">
+      <button id="new-game">New game</button>
+      <button id="undo">Undo</button>
+      <button id="change-mode">Change mode</button>
+      <a id="help-link" href="help.html" target="_blank" rel="noopener">Help</a>
+    </div>
   </div>
+
   <script src="engine.js"></script>
+  <script src="ai.js"></script>
+  <script src="weights.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

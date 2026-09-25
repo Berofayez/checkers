@@ -11,7 +11,7 @@ technology, no native app, no new toolchain.
 - [ ] A `manifest.json` (name, icon(s), theme color, `display: standalone`)
       is linked from `index.html`.
 - [ ] A service worker caches the game's static assets (`index.html`,
-      `script.js`, `engine.js`, `ai.js`, `weights.json`, `style.css`,
+      `script.js`, `engine.js`, `ai.js`, `weights.js`, `style.css`,
       `help.html`,
       and the manifest icons) on first visit.
 - [ ] The manifest and service worker use relative paths (`./`), not
@@ -19,7 +19,7 @@ technology, no native app, no new toolchain.
       `/checkers/` subpath rather than the domain root.
 - [ ] After a first visit online, opening the game again with no network
       connection still loads and is fully playable, including against the
-      computer (its `weights.json` is cached too).
+      computer (its `weights.js` is cached too).
 - [ ] A mobile browser recognizes the page as installable (e.g. offers "Add
       to Home Screen"), and the installed icon/name match the manifest.
 - [ ] The service worker doesn't serve stale files forever — there's a

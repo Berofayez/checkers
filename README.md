@@ -16,6 +16,9 @@ required.
 - Full ruleset: forward moves, mandatory jumps, multi-jump chains, king
   promotion, win detection, and draw detection after 40 quiet turns.
 - Click-to-select play with legal-move and mandatory-jump highlighting.
+- Two ways to play: **with a friend** on the same screen, or **vs the
+  computer**, an AI that taught itself by playing itself (self-play
+  reinforcement learning).
 - **New game** button to reset the board at any time.
 - **Undo** button that steps back one full turn at a time (a multi-jump
   chain undoes as a single unit), all the way to the start of the game.
@@ -31,7 +34,9 @@ required.
 - `trainer/train.js` — teaches the computer opponent by self-play
   reinforcement learning. Run `node trainer/train.js` (about 100 seconds,
   needs only Node) to reproduce `weights.json`.
-- `weights.json` — the learned numbers the computer opponent plays with.
+- `weights.json`, `weights.js` — the learned numbers the computer opponent
+  plays with (the same data; the `.js` copy loads as a normal script, so it
+  works even when the page is opened straight from disk).
 - `index.html`, `script.js`, `style.css` — the game's screen and controls.
 - `help.html` — the in-app instructions page, self-contained.
 - `docs/spec.md` — the full rules specification the game is built against.
