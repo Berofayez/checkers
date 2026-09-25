@@ -6,7 +6,10 @@ American checkers rules except each side starts with 8 pieces instead of 12.
 
 ## Play it
 
-Open `index.html` in a browser. That's it — no server or install required.
+**Live:** https://berofayez.github.io/checkers/
+
+Or run it locally: open `index.html` in a browser. No server or install
+required.
 
 ## Features
 
