@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "features": [
+    "men",
+    "kings",
+    "advancement",
+    "backRow",
+    "center",
+    "edges",
+    "mobility",
+    "captureToMove"
+  ],
+  "weights": [
+    1.003626,
+    1.395119,
+    -0.028438,
+    0.269286,
+    -0.003165,
+    0.054997,
+    0.072272,
+    0.474874
+  ],
+  "training": {
+    "method": "TD(0) self-play",
+    "games": 20000,
+    "seed": 1,
+    "alpha": 0.02
+  },
+  "evaluation": {
+    "lookaheadDepth": 3,
+    "vsRandom": {
+      "games": 1000,
+      "wins": 1000,
+      "draws": 0,
+      "losses": 0
+    },
+    "vsRandomNoLookahead": {
+      "games": 1000,
+      "wins": 998,
+      "draws": 2,
+      "losses": 0
+    },
+    "learningCurve": [
+      {
+        "games": 0,
+        "winRate": 0.53
+      },
+      {
+        "games": 250,
+        "winRate": 0.995
+      },
+      {
+        "games": 1000,
+        "winRate": 1
+      },
+      {
+        "games": 3000,
+        "winRate": 1
+      },
+      {
+        "games": 10000,
+        "winRate": 1
+      },
+      {
+        "games": 20000,
+        "winRate": 1
+      }
+    ]
+  }
+}

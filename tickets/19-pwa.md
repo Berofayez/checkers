@@ -11,7 +11,8 @@ technology, no native app, no new toolchain.
 - [ ] A `manifest.json` (name, icon(s), theme color, `display: standalone`)
       is linked from `index.html`.
 - [ ] A service worker caches the game's static assets (`index.html`,
-      `script.js`, `engine.js`, `weights.json`, `style.css`, `help.html`,
+      `script.js`, `engine.js`, `ai.js`, `weights.json`, `style.css`,
+      `help.html`,
       and the manifest icons) on first visit.
 - [ ] The manifest and service worker use relative paths (`./`), not
       root-absolute ones, because GitHub Pages serves this repo under the

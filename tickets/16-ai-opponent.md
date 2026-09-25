@@ -16,13 +16,14 @@ trained AI picks its moves through the exact same rules pipeline as a human.
       moves first) and the computer plays White.
 - [ ] A "Change mode" control returns to the two-option choice at any time;
       New game restarts in the mode currently being played.
-- [ ] The browser loads `weights.json` and can score a candidate board
-      position using the same feature/value-function shape trained in
-      ticket 15.
-- [ ] On its turn, the computer evaluates every move/jump returned by
-      `getSelectableMoves` for its pieces (so mandatory jumps are already
-      respected), scores the resulting position for each, and plays the
-      best-scoring one.
+- [ ] `index.html` loads `ai.js` (after `engine.js`) and the game loads
+      `weights.json`, so the browser scores positions with exactly the code
+      the trainer learned with (ticket 15).
+- [ ] On its turn, the computer calls `chooseMove` from `ai.js`, which looks
+      at every move from `getAllMoves` (so mandatory jumps and multi-jump
+      chains are already respected), looks a few moves ahead using the
+      learned scoring, and plays the best one. The default depth is chosen
+      so a move takes well under a second on a phone.
 - [ ] The AI's move is applied through the same move-application path a
       human click uses (`applyMove`), so multi-jump chains,
       promotion-ends-chain, win/draw detection, and Undo all keep working
