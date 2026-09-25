@@ -7,8 +7,9 @@ A player can choose Easy, Medium, or Hard before playing the computer, all
 using the one trained model from ticket 15 — no retraining.
 
 ## Done when
-- [ ] An Easy/Medium/Hard selector is visible alongside the "Play vs
-      Computer" control, defaulting to one clear level (e.g. Medium).
+- [ ] An Easy/Medium/Hard selector is shown when the player picks "Play vs
+      Computer" (and not in "Play with a friend"), defaulting to one clear
+      level (e.g. Medium).
 - [ ] On Hard, the computer always plays the highest-scoring move (as built
       in ticket 16).
 - [ ] On Medium and Easy, the computer sometimes plays a non-optimal move on

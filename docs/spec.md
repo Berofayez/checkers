@@ -44,7 +44,7 @@ instead of 12.
 - **Where training happens:** offline, via a Node.js script separate from the browser game, reusing the same move-generation rules. It produces a small weights file with the learned numbers.
 - **Move selection during play:** the browser loads the trained weights and scores legal moves with them (optionally with a shallow lookahead), picking the best-scoring move for the computer's side. No training happens while you're playing — it's instant.
 - **Difficulty:** three levels (Easy, Medium, Hard) built on the one trained model. Hard always plays the best-scoring move; Medium and Easy occasionally play a non-optimal move on purpose instead, more often on Easy, so both are genuinely beatable.
-- A **Play vs Computer** control starts this mode. Which side the computer plays is decided when this is implemented.
+- The player chooses between two modes: **Play with a friend** (two people taking turns on the same screen) and **Play vs Computer**. In vs Computer mode the human plays Black and moves first, the computer plays White, and the player also picks a difficulty level.
 
 ## Screen
 - The board, with pieces as circles and kings shown with a crown mark.
@@ -54,7 +54,8 @@ instead of 12.
   - Clicking an illegal square does nothing.
   - Clicking a different own piece switches the selection, except during a multi-jump.
 - When a jump is required, the pieces that can jump are highlighted.
-- A **New game** button resets the board.
+- On opening the game, a choice between **Play with a friend** and **Play vs Computer** (with an Easy/Medium/Hard picker). A **Change mode** button returns to this choice.
+- A **New game** button resets the board and restarts in the current mode.
 - The board and controls resize to fit small screens, and the page can be installed to a phone's home screen and keeps working offline (a Progressive Web App).
 - A short sound plays for a move, a capture, a win, and a draw, with a mute control.
 - Pieces animate into place when they move, instead of snapping instantly.
